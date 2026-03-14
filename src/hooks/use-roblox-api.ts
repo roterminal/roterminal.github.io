@@ -39,7 +39,7 @@ const SORT_MAP: Record<CatalogSort, string> = {
 
 const CATEGORY_MAP: Record<CatalogCategory, { Category: string; Subcategory?: string }> = {
   all: { Category: "1" },
-  collectibles: { Category: "1", Subcategory: "2" },
+  collectibles: { Category: "2" },
   clothing: { Category: "3" },
   accessories: { Category: "11" },
   hats: { Category: "11", Subcategory: "9" },
@@ -125,11 +125,15 @@ export function useRobloxApi() {
   const fetchThumbnails = useCallback(async (assetIds: number[]): Promise<Record<number, string>> => {
     if (assetIds.length === 0) return {};
     try {
-      const data = await robloxApi.getAssetThumbnails(assetIds);
+      const BATCH_SIZE = 10;
       const map: Record<number, string> = {};
-      (data.data || []).forEach((t: any) => {
-        if (t.imageUrl) map[t.targetId] = t.imageUrl;
-      });
+      for (let i = 0; i < assetIds.length; i += BATCH_SIZE) {
+        const batch = assetIds.slice(i, i + BATCH_SIZE);
+        const data = await robloxApi.getAssetThumbnails(batch);
+        (data.data || []).forEach((t: any) => {
+          if (t.imageUrl) map[t.targetId] = t.imageUrl;
+        });
+      }
       return map;
     } catch {
       return {};
