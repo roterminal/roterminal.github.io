@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ChevronRight, Search, X, ChevronDown } from "lucide-react";
+import { Loader2, ChevronRight, Search, X, ChevronDown, Crown } from "lucide-react";
 import { useRobloxApi, formatRap, type LimitedItem, type CatalogSort, type CatalogCategory } from "@/hooks/use-roblox-api";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 
@@ -52,6 +52,7 @@ export function ItemGrid({
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<LimitedItem | null>(null);
+  const [limitedOnly, setLimitedOnly] = useState(false);
 
   // Dropdown states
   const [showCatDropdown, setShowCatDropdown] = useState(false);
@@ -61,7 +62,7 @@ export function ItemGrid({
 
   useEffect(() => {
     loadItems();
-  }, [sort, category]);
+  }, [sort, category, limitedOnly]);
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -222,6 +223,20 @@ export function ItemGrid({
               )}
             </div>
 
+            {/* Limited toggle */}
+            <button
+              onClick={() => { setLimitedOnly(!limitedOnly); setItems([]); }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors ${
+                limitedOnly ? "bg-primary/15 text-profit" : "bg-background text-secondary-foreground hover:bg-background/80"
+              }`}
+            >
+              <Crown size={12} />
+              <span>Limited Only</span>
+              <div className={`w-7 h-4 rounded-full transition-colors ml-1 relative ${limitedOnly ? "bg-primary" : "bg-muted"}`}>
+                <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-background shadow transition-transform ${limitedOnly ? "translate-x-3.5" : "translate-x-0.5"}`} />
+              </div>
+            </button>
+
             {/* Active filter badges */}
             {search && (
               <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-[10px] text-profit">
@@ -253,7 +268,7 @@ export function ItemGrid({
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {items.map((item) => (
+        {(limitedOnly ? items.filter(isLimited) : items).map((item) => (
           <div
             key={item.id}
             className="surface-card p-3 cursor-pointer group"
