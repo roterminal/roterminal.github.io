@@ -63,15 +63,19 @@ export function ItemGrid({
         { sort, category, limit: safeLimit, keyword: search || undefined },
         nextCursor
       );
-    const newItems = nextCursor ? [...items, ...result.items] : result.items;
-    setItems(newItems);
-    setCursor(result.nextCursor);
-    setHasMore(!!result.nextCursor);
-    setInitialLoad(false);
+      const newItems = nextCursor ? [...items, ...result.items] : result.items;
+      setItems(newItems);
+      setCursor(result.nextCursor);
+      setHasMore(!!result.nextCursor);
 
-    const ids = result.items.map((i) => i.id);
-    const thumbs = await fetchThumbnails(ids);
-    setThumbnails((prev) => (nextCursor ? { ...prev, ...thumbs } : thumbs));
+      const ids = result.items.map((i) => i.id);
+      const thumbs = await fetchThumbnails(ids);
+      setThumbnails((prev) => (nextCursor ? { ...prev, ...thumbs } : thumbs));
+    } catch (e: any) {
+      setLoadError(e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSearch = (e: React.KeyboardEvent) => {
@@ -84,7 +88,7 @@ export function ItemGrid({
   const isLimited = (item: LimitedItem) =>
     item.itemRestrictions?.includes("Limited") || item.itemRestrictions?.includes("LimitedUnique");
 
-  if (initialLoad && loading) {
+  if (isLoading && items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="animate-spin text-primary" size={28} />
