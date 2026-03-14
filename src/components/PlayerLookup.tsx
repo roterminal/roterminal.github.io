@@ -3,30 +3,51 @@ import { Search, Loader2, User } from "lucide-react";
 import { useRobloxApi, formatRap, type RobloxUser, type InventoryItem } from "@/hooks/use-roblox-api";
 
 export function PlayerLookup() {
-  const { loading, error, fetchUser, fetchInventory } = useRobloxApi();
+  const { loading, error, fetchUser, searchUsers, fetchInventory, fetchUserAvatar } = useRobloxApi();
   const [username, setUsername] = useState("");
   const [user, setUser] = useState<RobloxUser | null>(null);
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [searchResults, setSearchResults] = useState<RobloxUser[]>([]);
   const [searched, setSearched] = useState(false);
+  const [showResults, setShowResults] = useState(false);
 
   const handleSearch = async () => {
     if (!username.trim()) return;
     setSearched(true);
     setUser(null);
     setInventory([]);
+    setAvatarUrl(null);
+
+    // Try exact match first
     const u = await fetchUser(username.trim());
-    setUser(u);
     if (u) {
-      const inv = await fetchInventory(u.id);
-      setInventory(inv);
+      selectUser(u);
+    } else {
+      // Fall back to search
+      const results = await searchUsers(username.trim());
+      setSearchResults(results);
+      setShowResults(true);
     }
+  };
+
+  const selectUser = async (u: RobloxUser) => {
+    setUser(u);
+    setShowResults(false);
+    setSearchResults([]);
+    const [inv, avatar] = await Promise.all([
+      fetchInventory(u.id),
+      fetchUserAvatar(u.id),
+    ]);
+    setInventory(inv);
+    setAvatarUrl(avatar);
   };
 
   const totalRap = inventory.reduce((sum, item) => sum + (item.recentAveragePrice || 0), 0);
 
   return (
     <div className="max-w-3xl">
-      <div className="flex gap-2 mb-6">
+      <div className="flex gap-2 mb-4">
         <div className="flex-1 relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
           <input
@@ -47,12 +68,42 @@ export function PlayerLookup() {
         </button>
       </div>
 
+      {/* Search results dropdown */}
+      {showResults && searchResults.length > 0 && (
+        <div className="surface-card mb-4 overflow-hidden">
+          <p className="px-4 py-2 text-xs text-muted-foreground uppercase tracking-wider" style={{ borderBottom: "1px solid hsl(var(--border))" }}>
+            {searchResults.length} users found
+          </p>
+          {searchResults.map((u) => (
+            <button
+              key={u.id}
+              onClick={() => selectUser(u)}
+              className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card-hover transition-colors text-left"
+              style={{ borderBottom: "1px solid hsl(var(--border) / 0.5)" }}
+            >
+              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-mono text-muted-foreground">
+                {u.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="text-sm text-foreground">{u.displayName}</p>
+                <p className="text-xs text-muted-foreground">@{u.name}</p>
+              </div>
+              <span className="ml-auto text-xs text-muted-foreground font-mono">ID: {u.id}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {user && (
         <div className="space-y-4">
           <div className="surface-card p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-md bg-secondary flex items-center justify-center">
-              <User size={20} className="text-muted-foreground" />
-            </div>
+            {avatarUrl ? (
+              <img src={avatarUrl} alt={user.displayName} className="w-12 h-12 rounded-md bg-secondary object-cover" />
+            ) : (
+              <div className="w-12 h-12 rounded-md bg-secondary flex items-center justify-center">
+                <User size={20} className="text-muted-foreground" />
+              </div>
+            )}
             <div className="flex-1">
               <h3 className="text-foreground font-semibold">{user.displayName}</h3>
               <p className="text-sm text-muted-foreground">@{user.name}</p>
@@ -104,7 +155,7 @@ export function PlayerLookup() {
         </div>
       )}
 
-      {searched && !user && !loading && (
+      {searched && !user && !loading && searchResults.length === 0 && (
         <div className="surface-card p-8 text-center text-sm text-loss">
           User not found. Check the username and try again.
         </div>

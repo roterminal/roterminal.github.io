@@ -1,10 +1,5 @@
 import { useState, useCallback } from "react";
-
-const ROPROXY_USERS = "https://users.roproxy.com/v1";
-const ROPROXY_CATALOG = "https://catalog.roproxy.com/v1";
-const ROPROXY_ECONOMY = "https://economy.roproxy.com/v1";
-const ROPROXY_INVENTORY = "https://inventory.roproxy.com/v1";
-const ROPROXY_THUMBNAILS = "https://thumbnails.roproxy.com/v1";
+import { robloxApi } from "@/lib/roblox-api";
 
 export interface RobloxUser {
   id: number;
@@ -25,16 +20,6 @@ export interface LimitedItem {
   itemRestrictions?: string[];
 }
 
-export interface ResaleData {
-  assetStock: number;
-  sales: number;
-  numberRemaining: number;
-  recentAveragePrice: number;
-  originalPrice: number;
-  priceDataPoints: { value: number; date: string }[];
-  volumeDataPoints: { value: number; date: string }[];
-}
-
 export interface InventoryItem {
   userAssetId: number;
   assetId: number;
@@ -48,23 +33,18 @@ export interface InventoryItem {
 export type CatalogSort = "relevance" | "favorited" | "sales" | "updated" | "price_asc" | "price_desc";
 export type CatalogCategory = "all" | "collectibles" | "clothing" | "accessories" | "hats" | "faces" | "gear";
 
-const SORT_MAP: Record<CatalogSort, number> = {
-  relevance: 0,
-  favorited: 1,
-  sales: 2,
-  updated: 3,
-  price_asc: 4,
-  price_desc: 5,
+const SORT_MAP: Record<CatalogSort, string> = {
+  relevance: "0", favorited: "1", sales: "2", updated: "3", price_asc: "4", price_desc: "5",
 };
 
-const CATEGORY_MAP: Record<CatalogCategory, { category: number; subcategory?: number }> = {
-  all: { category: 1 },
-  collectibles: { category: 2 },
-  clothing: { category: 3 },
-  accessories: { category: 11 },
-  hats: { category: 11, subcategory: 9 },
-  faces: { category: 11, subcategory: 10 },
-  gear: { category: 11, subcategory: 5 },
+const CATEGORY_MAP: Record<CatalogCategory, { Category: string; Subcategory?: string }> = {
+  all: { Category: "1" },
+  collectibles: { Category: "2" },
+  clothing: { Category: "3" },
+  accessories: { Category: "11" },
+  hats: { Category: "11", Subcategory: "9" },
+  faces: { Category: "11", Subcategory: "10" },
+  gear: { Category: "11", Subcategory: "5" },
 };
 
 export interface CatalogFilters {
@@ -82,12 +62,25 @@ export function useRobloxApi() {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${ROPROXY_USERS}/users/get-by-username?username=${encodeURIComponent(username)}`);
-      if (!res.ok) throw new Error("User not found");
-      return await res.json();
+      const data = await robloxApi.getUserByUsername(username);
+      return data;
     } catch (e: any) {
       setError(e.message);
       return null;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  const searchUsers = useCallback(async (keyword: string): Promise<RobloxUser[]> => {
+    setLoading(true);
+    setError(null);
+    try {
+      const data = await robloxApi.searchUsers(keyword);
+      return data.data || [];
+    } catch (e: any) {
+      setError(e.message);
+      return [];
     } finally {
       setLoading(false);
     }
@@ -99,23 +92,17 @@ export function useRobloxApi() {
     try {
       const sort = SORT_MAP[filters?.sort || "updated"];
       const cat = CATEGORY_MAP[filters?.category || "all"];
-      const limit = filters?.limit || 30;
+      const limit = String(filters?.limit || 30);
 
-      const params = new URLSearchParams();
-      params.set("Category", String(cat.category));
-      if (cat.subcategory) params.set("Subcategory", String(cat.subcategory));
-      params.set("Limit", String(limit));
-      params.set("SortType", String(sort));
-      if (filters?.keyword) params.set("Keyword", filters.keyword);
-      if (cursor) params.set("Cursor", cursor);
+      const params: Record<string, string> = {
+        ...cat,
+        Limit: limit,
+        SortType: sort,
+      };
+      if (filters?.keyword) params.Keyword = filters.keyword;
+      if (cursor) params.Cursor = cursor;
 
-      const url = `${ROPROXY_CATALOG}/search/items/details?${params.toString()}`;
-      const res = await fetch(url);
-      if (!res.ok) {
-        const errData = await res.json().catch(() => null);
-        throw new Error(errData?.errors?.[0]?.message || "Failed to fetch catalog");
-      }
-      const data = await res.json();
+      const data = await robloxApi.searchCatalog(params);
       const items: LimitedItem[] = (data.data || []).map((item: any) => ({
         id: item.id,
         name: item.name,
@@ -135,28 +122,10 @@ export function useRobloxApi() {
     }
   }, []);
 
-  const fetchResaleData = useCallback(async (assetId: number): Promise<ResaleData | null> => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch(`${ROPROXY_ECONOMY}/assets/${assetId}/resale-data`);
-      if (!res.ok) throw new Error("Failed to fetch resale data");
-      return await res.json();
-    } catch (e: any) {
-      setError(e.message);
-      return null;
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   const fetchThumbnails = useCallback(async (assetIds: number[]): Promise<Record<number, string>> => {
     if (assetIds.length === 0) return {};
     try {
-      const ids = assetIds.join(",");
-      const res = await fetch(`${ROPROXY_THUMBNAILS}/assets?assetIds=${ids}&size=150x150&format=Png`);
-      if (!res.ok) return {};
-      const data = await res.json();
+      const data = await robloxApi.getAssetThumbnails(assetIds);
       const map: Record<number, string> = {};
       (data.data || []).forEach((t: any) => {
         if (t.imageUrl) map[t.targetId] = t.imageUrl;
@@ -167,13 +136,20 @@ export function useRobloxApi() {
     }
   }, []);
 
+  const fetchUserAvatar = useCallback(async (userId: number): Promise<string | null> => {
+    try {
+      const data = await robloxApi.getUserAvatarThumbnails([userId]);
+      return data.data?.[0]?.imageUrl || null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   const fetchInventory = useCallback(async (userId: number): Promise<InventoryItem[]> => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${ROPROXY_INVENTORY}/users/${userId}/assets/collectibles?limit=100&sortOrder=Desc`);
-      if (!res.ok) throw new Error("Failed to fetch inventory");
-      const data = await res.json();
+      const data = await robloxApi.getUserCollectibles(userId);
       return data.data || [];
     } catch (e: any) {
       setError(e.message);
@@ -183,7 +159,7 @@ export function useRobloxApi() {
     }
   }, []);
 
-  return { loading, error, fetchUser, fetchLimiteds, fetchResaleData, fetchThumbnails, fetchInventory };
+  return { loading, error, fetchUser, searchUsers, fetchLimiteds, fetchThumbnails, fetchUserAvatar, fetchInventory };
 }
 
 export function formatRap(n?: number): string {
