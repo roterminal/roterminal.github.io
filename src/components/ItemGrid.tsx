@@ -213,10 +213,10 @@ export function ItemGrid({
         <div className="flex justify-center mt-6">
           <button
             onClick={() => loadItems(cursor)}
-            disabled={loading}
+            disabled={isLoading}
             className="flex items-center gap-2 px-5 py-2.5 rounded-md bg-secondary text-sm text-secondary-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
           >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
+            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
             Load More
           </button>
         </div>
