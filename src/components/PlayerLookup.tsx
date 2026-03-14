@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, Loader2, User } from "lucide-react";
 import { useRobloxApi, formatRap, type RobloxUser, type InventoryItem } from "@/hooks/use-roblox-api";
+import { robloxApi } from "@/lib/roblox-api";
 
 export function PlayerLookup() {
   const { loading, error, fetchUser, searchUsers, fetchInventory, fetchUserAvatar } = useRobloxApi();
@@ -9,6 +10,7 @@ export function PlayerLookup() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchResults, setSearchResults] = useState<RobloxUser[]>([]);
+  const [searchAvatars, setSearchAvatars] = useState<Record<number, string>>({});
   const [searched, setSearched] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
@@ -28,6 +30,16 @@ export function PlayerLookup() {
       const results = await searchUsers(username.trim());
       setSearchResults(results);
       setShowResults(true);
+      // Fetch avatars for all results
+      if (results.length > 0) {
+        const ids = results.map((u: RobloxUser) => u.id);
+        const data = await robloxApi.getUserAvatarThumbnails(ids);
+        const map: Record<number, string> = {};
+        (data.data || []).forEach((t: any) => {
+          if (t.imageUrl) map[t.targetId] = t.imageUrl;
+        });
+        setSearchAvatars(map);
+      }
     }
   };
 
@@ -81,9 +93,13 @@ export function PlayerLookup() {
               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card-hover transition-colors text-left"
               style={{ borderBottom: "1px solid hsl(var(--border) / 0.5)" }}
             >
-              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-mono text-muted-foreground">
-                {u.name.charAt(0).toUpperCase()}
-              </div>
+              {searchAvatars[u.id] ? (
+                <img src={searchAvatars[u.id]} alt={u.displayName} className="w-8 h-8 rounded-md bg-secondary object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-mono text-muted-foreground">
+                  {u.name.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <p className="text-sm text-foreground">{u.displayName}</p>
                 <p className="text-xs text-muted-foreground">@{u.name}</p>
