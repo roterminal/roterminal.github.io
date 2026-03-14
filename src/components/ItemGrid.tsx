@@ -62,7 +62,7 @@ export function ItemGrid({
 
   useEffect(() => {
     loadItems();
-  }, [sort, category]);
+  }, [sort, category, limitedOnly]);
 
   // Close dropdowns on outside click
   useEffect(() => {
