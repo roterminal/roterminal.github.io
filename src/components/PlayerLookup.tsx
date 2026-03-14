@@ -9,6 +9,7 @@ export function PlayerLookup() {
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [searchResults, setSearchResults] = useState<RobloxUser[]>([]);
+  const [searchAvatars, setSearchAvatars] = useState<Record<number, string>>({});
   const [searched, setSearched] = useState(false);
   const [showResults, setShowResults] = useState(false);
 
