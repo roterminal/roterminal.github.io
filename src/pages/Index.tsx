@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, TrendingUp, Package, Zap, Layers, Star, ArrowRight } from "lucide-react";
+import { Search, TrendingUp, Package, Zap, Layers, Star, ArrowRight, Crown } from "lucide-react";
 import { SidebarNav } from "@/components/SidebarNav";
 import { SearchModal } from "@/components/SearchModal";
 import { MarketTicker } from "@/components/MarketTicker";
@@ -27,7 +27,6 @@ const Index = () => {
       <SidebarNav activeTab={activeTab} onTabChange={setActiveTab} />
 
       <div className="ml-16">
-        {/* Top bar */}
         <header
           className="sticky top-0 z-30 bg-background/80 backdrop-blur-md"
           style={{ borderBottom: "1px solid hsl(var(--border))" }}
@@ -36,6 +35,7 @@ const Index = () => {
             <h1 className="text-lg font-semibold text-foreground tracking-tight">
               {activeTab === "market" && "Market Overview"}
               {activeTab === "catalog" && "Catalog"}
+              {activeTab === "limiteds" && "Limiteds"}
               {activeTab === "players" && "Player Lookup"}
               {activeTab === "analytics" && "Analytics"}
             </h1>
@@ -51,10 +51,10 @@ const Index = () => {
           <MarketTicker />
         </header>
 
-        {/* Content */}
         <main className="p-6">
           {activeTab === "market" && <MarketHome onNavigate={setActiveTab} />}
           {activeTab === "catalog" && <ItemGrid />}
+          {activeTab === "limiteds" && <ItemGrid initialCategory="collectibles" />}
           {activeTab === "players" && <PlayerLookup />}
           {activeTab === "analytics" && (
             <div className="surface-card p-12 text-center">
@@ -78,7 +78,6 @@ const Index = () => {
 function MarketHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
   return (
     <div className="space-y-8">
-      {/* Hero Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -106,6 +105,13 @@ function MarketHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
               Browse Catalog
             </button>
             <button
+              onClick={() => onNavigate("limiteds")}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-md bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 transition-colors"
+            >
+              <Crown size={14} />
+              Limiteds
+            </button>
+            <button
               onClick={() => onNavigate("players")}
               className="flex items-center gap-2 px-4 py-2.5 rounded-md bg-secondary text-secondary-foreground text-sm hover:bg-secondary/80 transition-colors"
             >
@@ -116,7 +122,6 @@ function MarketHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </div>
       </motion.div>
 
-      {/* Stats row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { icon: TrendingUp, iconClass: "text-profit", label: "Market Volume", value: "2.4B", sub: "+3.2% 24h", subClass: "text-profit" },
@@ -141,23 +146,22 @@ function MarketHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
         ))}
       </div>
 
-      {/* Category Quick Links */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Categories</h3>
         </div>
         <div className="grid grid-cols-3 md:grid-cols-6 gap-3">
           {[
-            { icon: Layers, label: "All Items", cat: "all" },
-            { icon: Star, label: "Collectibles", cat: "collectibles" },
-            { icon: Package, label: "Accessories", cat: "accessories" },
-            { icon: "🎩", label: "Hats", cat: "hats" },
-            { icon: "😎", label: "Faces", cat: "faces" },
-            { icon: "⚔️", label: "Gear", cat: "gear" },
+            { icon: Layers, label: "All Items", tab: "catalog" },
+            { icon: Crown, label: "Limiteds", tab: "limiteds" },
+            { icon: Package, label: "Accessories", tab: "catalog" },
+            { icon: "🎩", label: "Hats", tab: "catalog" },
+            { icon: "😎", label: "Faces", tab: "catalog" },
+            { icon: "⚔️", label: "Gear", tab: "catalog" },
           ].map((c) => (
             <button
-              key={c.cat}
-              onClick={() => onNavigate("catalog")}
+              key={c.label}
+              onClick={() => onNavigate(c.tab)}
               className="surface-card p-4 flex flex-col items-center gap-2 text-center hover:bg-card-hover transition-colors"
             >
               {typeof c.icon === "string" ? (
@@ -171,10 +175,9 @@ function MarketHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
         </div>
       </div>
 
-      {/* Featured / New Limiteds */}
       <div>
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">New & Updated Limiteds</h3>
+          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">New & Updated</h3>
           <button
             onClick={() => onNavigate("catalog")}
             className="flex items-center gap-1 text-xs text-primary hover:opacity-80 transition-opacity"
@@ -185,7 +188,6 @@ function MarketHome({ onNavigate }: { onNavigate: (tab: string) => void }) {
         <ItemGrid showFilters={false} limit={12} initialSort="updated" />
       </div>
 
-      {/* Best Selling */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Best Selling</h3>
