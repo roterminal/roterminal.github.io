@@ -78,8 +78,9 @@ export function ItemGrid({
     setIsLoading(true);
     setLoadError(null);
     try {
+      const effectiveCategory = limitedOnly ? "collectibles" : category;
       const result = await fetchLimiteds(
-        { sort, category, limit: safeLimit, keyword: search || undefined },
+        { sort, category: effectiveCategory, limit: safeLimit, keyword: search || undefined },
         nextCursor
       );
       const newItems = nextCursor ? [...items, ...result.items] : result.items;
@@ -268,7 +269,7 @@ export function ItemGrid({
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {(limitedOnly ? items.filter(isLimited) : items).map((item) => (
+        {items.map((item) => (
           <div
             key={item.id}
             className="surface-card p-3 cursor-pointer group"
