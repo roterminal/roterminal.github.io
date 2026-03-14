@@ -21,12 +21,16 @@ export function PlayerLookup() {
     setInventory([]);
     setAvatarUrl(null);
 
-    // Try exact match first
-    const u = await fetchUser(username.trim());
+    // Try exact match first, then fall back to search
+    let u: RobloxUser | null = null;
+    try {
+      u = await fetchUser(username.trim());
+    } catch {
+      // Ignore 404 from exact match
+    }
     if (u) {
       selectUser(u);
     } else {
-      // Fall back to search
       const results = await searchUsers(username.trim());
       setSearchResults(results);
       setShowResults(true);
