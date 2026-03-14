@@ -37,7 +37,10 @@ export function ItemGrid({
   keyword,
   title,
 }: ItemGridProps) {
-  const { loading, error, fetchLimiteds, fetchThumbnails } = useRobloxApi();
+  // Clamp limit to Roblox allowed values: 10, 28, 30
+  const safeLimit = limit <= 10 ? 10 : limit <= 28 ? 28 : 30;
+
+  const { fetchLimiteds, fetchThumbnails } = useRobloxApi();
   const [items, setItems] = useState<LimitedItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
   const [cursor, setCursor] = useState<string | undefined>();
@@ -45,26 +48,34 @@ export function ItemGrid({
   const [sort, setSort] = useState<CatalogSort>(initialSort);
   const [category, setCategory] = useState<CatalogCategory>(initialCategory);
   const [search, setSearch] = useState(keyword || "");
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadItems();
   }, [sort, category]);
 
   const loadItems = async (nextCursor?: string) => {
-    const result = await fetchLimiteds(
-      { sort, category, limit, keyword: search || undefined },
-      nextCursor
-    );
-    const newItems = nextCursor ? [...items, ...result.items] : result.items;
-    setItems(newItems);
-    setCursor(result.nextCursor);
-    setHasMore(!!result.nextCursor);
-    setInitialLoad(false);
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await fetchLimiteds(
+        { sort, category, limit: safeLimit, keyword: search || undefined },
+        nextCursor
+      );
+      const newItems = nextCursor ? [...items, ...result.items] : result.items;
+      setItems(newItems);
+      setCursor(result.nextCursor);
+      setHasMore(!!result.nextCursor);
 
-    const ids = result.items.map((i) => i.id);
-    const thumbs = await fetchThumbnails(ids);
-    setThumbnails((prev) => (nextCursor ? { ...prev, ...thumbs } : thumbs));
+      const ids = result.items.map((i) => i.id);
+      const thumbs = await fetchThumbnails(ids);
+      setThumbnails((prev) => (nextCursor ? { ...prev, ...thumbs } : thumbs));
+    } catch (e: any) {
+      setLoadError(e.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSearch = (e: React.KeyboardEvent) => {
@@ -77,7 +88,7 @@ export function ItemGrid({
   const isLimited = (item: LimitedItem) =>
     item.itemRestrictions?.includes("Limited") || item.itemRestrictions?.includes("LimitedUnique");
 
-  if (initialLoad && loading) {
+  if (isLoading && items.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 gap-3">
         <Loader2 className="animate-spin text-primary" size={28} />
@@ -138,10 +149,10 @@ export function ItemGrid({
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">{title}</h2>
       )}
 
-      {error && items.length === 0 && (
+      {loadError && items.length === 0 && (
         <div className="surface-card p-6 text-center">
           <p className="text-loss text-sm mb-1">Failed to load items</p>
-          <p className="text-muted-foreground text-xs">{error}</p>
+          <p className="text-muted-foreground text-xs">{loadError}</p>
           <button
             onClick={() => loadItems()}
             className="mt-3 px-3 py-1.5 rounded-md bg-secondary text-xs text-secondary-foreground hover:bg-secondary/80 transition-colors"
@@ -191,7 +202,7 @@ export function ItemGrid({
         ))}
       </div>
 
-      {items.length === 0 && !loading && !error && (
+      {items.length === 0 && !isLoading && !loadError && (
         <div className="surface-card p-12 text-center">
           <p className="text-sm text-muted-foreground">No items found.</p>
           <p className="text-xs text-muted-foreground mt-1">Try a different search or category.</p>
@@ -202,10 +213,10 @@ export function ItemGrid({
         <div className="flex justify-center mt-6">
           <button
             onClick={() => loadItems(cursor)}
-            disabled={loading}
+            disabled={isLoading}
             className="flex items-center gap-2 px-5 py-2.5 rounded-md bg-secondary text-sm text-secondary-foreground hover:bg-secondary/80 transition-colors disabled:opacity-50"
           >
-            {loading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
+            {isLoading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
             Load More
           </button>
         </div>
