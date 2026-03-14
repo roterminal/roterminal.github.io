@@ -37,7 +37,10 @@ export function ItemGrid({
   keyword,
   title,
 }: ItemGridProps) {
-  const { loading, error, fetchLimiteds, fetchThumbnails } = useRobloxApi();
+  // Clamp limit to Roblox allowed values: 10, 28, 30
+  const safeLimit = limit <= 10 ? 10 : limit <= 28 ? 28 : 30;
+
+  const { fetchLimiteds, fetchThumbnails } = useRobloxApi();
   const [items, setItems] = useState<LimitedItem[]>([]);
   const [thumbnails, setThumbnails] = useState<Record<number, string>>({});
   const [cursor, setCursor] = useState<string | undefined>();
@@ -45,17 +48,21 @@ export function ItemGrid({
   const [sort, setSort] = useState<CatalogSort>(initialSort);
   const [category, setCategory] = useState<CatalogCategory>(initialCategory);
   const [search, setSearch] = useState(keyword || "");
-  const [initialLoad, setInitialLoad] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   useEffect(() => {
     loadItems();
   }, [sort, category]);
 
   const loadItems = async (nextCursor?: string) => {
-    const result = await fetchLimiteds(
-      { sort, category, limit, keyword: search || undefined },
-      nextCursor
-    );
+    setIsLoading(true);
+    setLoadError(null);
+    try {
+      const result = await fetchLimiteds(
+        { sort, category, limit: safeLimit, keyword: search || undefined },
+        nextCursor
+      );
     const newItems = nextCursor ? [...items, ...result.items] : result.items;
     setItems(newItems);
     setCursor(result.nextCursor);
