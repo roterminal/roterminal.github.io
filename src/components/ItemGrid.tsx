@@ -202,7 +202,7 @@ export function ItemGrid({
         ))}
       </div>
 
-      {items.length === 0 && !loading && !error && (
+      {items.length === 0 && !isLoading && !loadError && (
         <div className="surface-card p-12 text-center">
           <p className="text-sm text-muted-foreground">No items found.</p>
           <p className="text-xs text-muted-foreground mt-1">Try a different search or category.</p>
