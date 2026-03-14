@@ -149,10 +149,10 @@ export function ItemGrid({
         <h2 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-4">{title}</h2>
       )}
 
-      {error && items.length === 0 && (
+      {loadError && items.length === 0 && (
         <div className="surface-card p-6 text-center">
           <p className="text-loss text-sm mb-1">Failed to load items</p>
-          <p className="text-muted-foreground text-xs">{error}</p>
+          <p className="text-muted-foreground text-xs">{loadError}</p>
           <button
             onClick={() => loadItems()}
             className="mt-3 px-3 py-1.5 rounded-md bg-secondary text-xs text-secondary-foreground hover:bg-secondary/80 transition-colors"
