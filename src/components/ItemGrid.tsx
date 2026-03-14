@@ -78,8 +78,9 @@ export function ItemGrid({
     setIsLoading(true);
     setLoadError(null);
     try {
+      const effectiveCategory = limitedOnly ? "collectibles" : category;
       const result = await fetchLimiteds(
-        { sort, category, limit: safeLimit, keyword: search || undefined },
+        { sort, category: effectiveCategory, limit: safeLimit, keyword: search || undefined },
         nextCursor
       );
       const newItems = nextCursor ? [...items, ...result.items] : result.items;
