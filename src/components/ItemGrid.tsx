@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Loader2, ChevronRight, Search, X, ChevronDown } from "lucide-react";
+import { Loader2, ChevronRight, Search, X, ChevronDown, Crown } from "lucide-react";
 import { useRobloxApi, formatRap, type LimitedItem, type CatalogSort, type CatalogCategory } from "@/hooks/use-roblox-api";
 import { ItemDetailModal } from "@/components/ItemDetailModal";
 
