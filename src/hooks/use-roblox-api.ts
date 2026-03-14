@@ -39,7 +39,7 @@ const SORT_MAP: Record<CatalogSort, string> = {
 
 const CATEGORY_MAP: Record<CatalogCategory, { Category: string; Subcategory?: string }> = {
   all: { Category: "1" },
-  collectibles: { Category: "1", Subcategory: "2" },
+  collectibles: { Category: "2" },
   clothing: { Category: "3" },
   accessories: { Category: "11" },
   hats: { Category: "11", Subcategory: "9" },
