@@ -78,17 +78,24 @@ export function ItemGrid({
     setIsLoading(true);
     setLoadError(null);
     try {
-      const effectiveCategory = limitedOnly ? "collectibles" : category;
       const result = await fetchLimiteds(
-        { sort, category: effectiveCategory, limit: safeLimit, keyword: search || undefined },
+        { sort, category, limit: safeLimit, keyword: search || undefined },
         nextCursor
       );
-      const newItems = nextCursor ? [...items, ...result.items] : result.items;
+
+      let newResultItems = result.items;
+      if (limitedOnly) {
+        newResultItems = newResultItems.filter(
+          (item) => item.itemRestrictions?.includes("Limited") || item.itemRestrictions?.includes("LimitedUnique")
+        );
+      }
+
+      const newItems = nextCursor ? [...items, ...newResultItems] : newResultItems;
       setItems(newItems);
       setCursor(result.nextCursor);
       setHasMore(!!result.nextCursor);
 
-      const ids = result.items.map((i) => i.id);
+      const ids = newResultItems.map((i) => i.id);
       const thumbs = await fetchThumbnails(ids);
       setThumbnails((prev) => (nextCursor ? { ...prev, ...thumbs } : thumbs));
     } catch (e: any) {
