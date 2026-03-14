@@ -93,9 +93,13 @@ export function PlayerLookup() {
               className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-card-hover transition-colors text-left"
               style={{ borderBottom: "1px solid hsl(var(--border) / 0.5)" }}
             >
-              <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-mono text-muted-foreground">
-                {u.name.charAt(0).toUpperCase()}
-              </div>
+              {searchAvatars[u.id] ? (
+                <img src={searchAvatars[u.id]} alt={u.displayName} className="w-8 h-8 rounded-md bg-secondary object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-md bg-secondary flex items-center justify-center text-xs font-mono text-muted-foreground">
+                  {u.name.charAt(0).toUpperCase()}
+                </div>
+              )}
               <div>
                 <p className="text-sm text-foreground">{u.displayName}</p>
                 <p className="text-xs text-muted-foreground">@{u.name}</p>
