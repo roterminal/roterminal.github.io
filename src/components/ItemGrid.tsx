@@ -52,6 +52,7 @@ export function ItemGrid({
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedItem, setSelectedItem] = useState<LimitedItem | null>(null);
+  const [limitedOnly, setLimitedOnly] = useState(false);
 
   // Dropdown states
   const [showCatDropdown, setShowCatDropdown] = useState(false);
