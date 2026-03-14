@@ -53,8 +53,8 @@ const Index = () => {
 
         <main className="p-6">
           {activeTab === "market" && <MarketHome onNavigate={setActiveTab} />}
-          {activeTab === "catalog" && <ItemGrid />}
-          {activeTab === "limiteds" && <ItemGrid initialCategory="collectibles" />}
+          {activeTab === "catalog" && <ItemGrid key="catalog-grid" />}
+          {activeTab === "limiteds" && <ItemGrid key="limiteds-grid" initialCategory="collectibles" />}
           {activeTab === "players" && <PlayerLookup />}
           {activeTab === "analytics" && (
             <div className="surface-card p-12 text-center">
