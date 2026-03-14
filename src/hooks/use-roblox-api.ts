@@ -22,6 +22,7 @@ export interface LimitedItem {
   assetType?: string;
   creatorName?: string;
   thumbnailUrl?: string;
+  itemRestrictions?: string[];
 }
 
 export interface ResaleData {
@@ -44,6 +45,35 @@ export interface InventoryItem {
   serialNumber?: number;
 }
 
+export type CatalogSort = "relevance" | "favorited" | "sales" | "updated" | "price_asc" | "price_desc";
+export type CatalogCategory = "all" | "collectibles" | "clothing" | "accessories" | "hats" | "faces" | "gear";
+
+const SORT_MAP: Record<CatalogSort, number> = {
+  relevance: 0,
+  favorited: 1,
+  sales: 2,
+  updated: 3,
+  price_asc: 4,
+  price_desc: 5,
+};
+
+const CATEGORY_MAP: Record<CatalogCategory, { category: number; subcategory?: number }> = {
+  all: { category: 1 },
+  collectibles: { category: 2 },
+  clothing: { category: 3 },
+  accessories: { category: 11 },
+  hats: { category: 11, subcategory: 9 },
+  faces: { category: 11, subcategory: 10 },
+  gear: { category: 11, subcategory: 5 },
+};
+
+export interface CatalogFilters {
+  keyword?: string;
+  sort?: CatalogSort;
+  category?: CatalogCategory;
+  limit?: number;
+}
+
 export function useRobloxApi() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -54,8 +84,7 @@ export function useRobloxApi() {
     try {
       const res = await fetch(`${ROPROXY_USERS}/users/get-by-username?username=${encodeURIComponent(username)}`);
       if (!res.ok) throw new Error("User not found");
-      const data = await res.json();
-      return data;
+      return await res.json();
     } catch (e: any) {
       setError(e.message);
       return null;
@@ -64,13 +93,28 @@ export function useRobloxApi() {
     }
   }, []);
 
-  const fetchLimiteds = useCallback(async (cursor?: string): Promise<{ items: LimitedItem[]; nextCursor?: string }> => {
+  const fetchLimiteds = useCallback(async (filters?: CatalogFilters, cursor?: string): Promise<{ items: LimitedItem[]; nextCursor?: string }> => {
     setLoading(true);
     setError(null);
     try {
-      const url = `${ROPROXY_CATALOG}/search/items/details?Category=2&Subcategory=2&Limit=30&SortType=3${cursor ? `&Cursor=${cursor}` : ""}`;
+      const sort = SORT_MAP[filters?.sort || "updated"];
+      const cat = CATEGORY_MAP[filters?.category || "all"];
+      const limit = filters?.limit || 30;
+
+      const params = new URLSearchParams();
+      params.set("Category", String(cat.category));
+      if (cat.subcategory) params.set("Subcategory", String(cat.subcategory));
+      params.set("Limit", String(limit));
+      params.set("SortType", String(sort));
+      if (filters?.keyword) params.set("Keyword", filters.keyword);
+      if (cursor) params.set("Cursor", cursor);
+
+      const url = `${ROPROXY_CATALOG}/search/items/details?${params.toString()}`;
       const res = await fetch(url);
-      if (!res.ok) throw new Error("Failed to fetch catalog");
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.errors?.[0]?.message || "Failed to fetch catalog");
+      }
       const data = await res.json();
       const items: LimitedItem[] = (data.data || []).map((item: any) => ({
         id: item.id,
@@ -80,6 +124,7 @@ export function useRobloxApi() {
         lowestPrice: item.lowestPrice,
         recentAveragePrice: item.recentAveragePrice,
         creatorName: item.creatorName,
+        itemRestrictions: item.itemRestrictions,
       }));
       return { items, nextCursor: data.nextPageCursor };
     } catch (e: any) {
@@ -139,4 +184,11 @@ export function useRobloxApi() {
   }, []);
 
   return { loading, error, fetchUser, fetchLimiteds, fetchResaleData, fetchThumbnails, fetchInventory };
+}
+
+export function formatRap(n?: number): string {
+  if (!n && n !== 0) return "—";
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+  return n.toLocaleString();
 }

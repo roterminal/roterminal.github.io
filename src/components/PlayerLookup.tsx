@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { Search, Loader2, User } from "lucide-react";
-import { useRobloxApi, type RobloxUser, type InventoryItem } from "@/hooks/use-roblox-api";
+import { useRobloxApi, formatRap, type RobloxUser, type InventoryItem } from "@/hooks/use-roblox-api";
 
 export function PlayerLookup() {
-  const { loading, error, fetchUser, fetchInventory, fetchThumbnails } = useRobloxApi();
+  const { loading, error, fetchUser, fetchInventory } = useRobloxApi();
   const [username, setUsername] = useState("");
   const [user, setUser] = useState<RobloxUser | null>(null);
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
@@ -12,6 +12,8 @@ export function PlayerLookup() {
   const handleSearch = async () => {
     if (!username.trim()) return;
     setSearched(true);
+    setUser(null);
+    setInventory([]);
     const u = await fetchUser(username.trim());
     setUser(u);
     if (u) {
@@ -22,14 +24,8 @@ export function PlayerLookup() {
 
   const totalRap = inventory.reduce((sum, item) => sum + (item.recentAveragePrice || 0), 0);
 
-  function formatRap(n: number) {
-    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
-    return n.toLocaleString();
-  }
-
   return (
-    <div>
+    <div className="max-w-3xl">
       <div className="flex gap-2 mb-6">
         <div className="flex-1 relative">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
