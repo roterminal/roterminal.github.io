@@ -268,7 +268,7 @@ export function ItemGrid({
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-        {items.map((item) => (
+        {(limitedOnly ? items.filter(isLimited) : items).map((item) => (
           <div
             key={item.id}
             className="surface-card p-3 cursor-pointer group"
