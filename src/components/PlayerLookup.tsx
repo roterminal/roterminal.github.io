@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, Loader2, User } from "lucide-react";
 import { useRobloxApi, formatRap, type RobloxUser, type InventoryItem } from "@/hooks/use-roblox-api";
+import { robloxApi } from "@/lib/roblox-api";
 
 export function PlayerLookup() {
   const { loading, error, fetchUser, searchUsers, fetchInventory, fetchUserAvatar } = useRobloxApi();
