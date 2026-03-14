@@ -1,23 +1,25 @@
-import { useState, useEffect } from "react";
-import { Loader2, ChevronRight, Filter, SortAsc } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { Loader2, ChevronRight, Search, X, ChevronDown } from "lucide-react";
 import { useRobloxApi, formatRap, type LimitedItem, type CatalogSort, type CatalogCategory } from "@/hooks/use-roblox-api";
+import { ItemDetailModal } from "@/components/ItemDetailModal";
 
 const SORT_OPTIONS: { value: CatalogSort; label: string }[] = [
   { value: "updated", label: "Recently Updated" },
   { value: "favorited", label: "Most Favorited" },
   { value: "sales", label: "Best Selling" },
+  { value: "relevance", label: "Relevance" },
   { value: "price_desc", label: "Price: High → Low" },
   { value: "price_asc", label: "Price: Low → High" },
 ];
 
-const CATEGORY_OPTIONS: { value: CatalogCategory; label: string }[] = [
-  { value: "all", label: "All Items" },
-  { value: "collectibles", label: "Collectibles" },
-  { value: "accessories", label: "Accessories" },
-  { value: "hats", label: "Hats" },
-  { value: "faces", label: "Faces" },
-  { value: "gear", label: "Gear" },
-  { value: "clothing", label: "Clothing" },
+const CATEGORY_OPTIONS: { value: CatalogCategory; label: string; emoji: string }[] = [
+  { value: "all", label: "All Items", emoji: "📦" },
+  { value: "collectibles", label: "Collectibles", emoji: "⭐" },
+  { value: "accessories", label: "Accessories", emoji: "👒" },
+  { value: "hats", label: "Hats", emoji: "🎩" },
+  { value: "faces", label: "Faces", emoji: "😎" },
+  { value: "gear", label: "Gear", emoji: "⚔️" },
+  { value: "clothing", label: "Clothing", emoji: "👕" },
 ];
 
 interface ItemGridProps {
@@ -37,7 +39,6 @@ export function ItemGrid({
   keyword,
   title,
 }: ItemGridProps) {
-  // Clamp limit to Roblox allowed values: 10, 28, 30
   const safeLimit = limit <= 10 ? 10 : limit <= 28 ? 28 : 30;
 
   const { fetchLimiteds, fetchThumbnails } = useRobloxApi();
@@ -50,10 +51,27 @@ export function ItemGrid({
   const [search, setSearch] = useState(keyword || "");
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedItem, setSelectedItem] = useState<LimitedItem | null>(null);
+
+  // Dropdown states
+  const [showCatDropdown, setShowCatDropdown] = useState(false);
+  const [showSortDropdown, setShowSortDropdown] = useState(false);
+  const catRef = useRef<HTMLDivElement>(null);
+  const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadItems();
   }, [sort, category]);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (catRef.current && !catRef.current.contains(e.target as Node)) setShowCatDropdown(false);
+      if (sortRef.current && !sortRef.current.contains(e.target as Node)) setShowSortDropdown(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   const loadItems = async (nextCursor?: string) => {
     setIsLoading(true);
@@ -78,15 +96,28 @@ export function ItemGrid({
     }
   };
 
-  const handleSearch = (e: React.KeyboardEvent) => {
-    if (e.key === "Enter") {
-      setItems([]);
-      loadItems();
-    }
+  const handleSearchSubmit = () => {
+    setItems([]);
+    loadItems();
+  };
+
+  const handleCategoryChange = (cat: CatalogCategory) => {
+    setCategory(cat);
+    setItems([]);
+    setShowCatDropdown(false);
+  };
+
+  const handleSortChange = (s: CatalogSort) => {
+    setSort(s);
+    setItems([]);
+    setShowSortDropdown(false);
   };
 
   const isLimited = (item: LimitedItem) =>
     item.itemRestrictions?.includes("Limited") || item.itemRestrictions?.includes("LimitedUnique");
+
+  const currentCat = CATEGORY_OPTIONS.find((c) => c.value === category);
+  const currentSort = SORT_OPTIONS.find((s) => s.value === sort);
 
   if (isLoading && items.length === 0) {
     return (
@@ -99,48 +130,107 @@ export function ItemGrid({
 
   return (
     <div>
-      {/* Filters bar */}
+      {/* Filter Bar */}
       {showFilters && (
-        <div className="flex flex-wrap items-center gap-3 mb-5">
-          <div className="flex-1 min-w-[200px]">
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              onKeyDown={handleSearch}
-              placeholder="Search items..."
-              className="w-full bg-secondary rounded-md px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring transition-shadow"
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <Filter size={14} className="text-muted-foreground" />
-            <select
-              value={category}
-              onChange={(e) => {
-                setCategory(e.target.value as CatalogCategory);
-                setItems([]);
-              }}
-              className="bg-secondary text-sm text-foreground rounded-md px-3 py-2 outline-none border-none cursor-pointer"
+        <div className="surface-card p-4 mb-5 space-y-3">
+          {/* Search row */}
+          <div className="flex gap-2">
+            <div className="flex-1 relative">
+              <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSearchSubmit()}
+                placeholder="Search items by name..."
+                className="w-full bg-background rounded-md pl-9 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:ring-1 focus:ring-ring transition-shadow"
+              />
+              {search && (
+                <button
+                  onClick={() => { setSearch(""); setItems([]); setTimeout(() => loadItems(), 0); }}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+            <button
+              onClick={handleSearchSubmit}
+              className="px-4 py-2.5 bg-primary text-primary-foreground rounded-md text-sm font-medium hover:opacity-90 transition-opacity"
             >
-              {CATEGORY_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+              Search
+            </button>
           </div>
-          <div className="flex items-center gap-2">
-            <SortAsc size={14} className="text-muted-foreground" />
-            <select
-              value={sort}
-              onChange={(e) => {
-                setSort(e.target.value as CatalogSort);
-                setItems([]);
-              }}
-              className="bg-secondary text-sm text-foreground rounded-md px-3 py-2 outline-none border-none cursor-pointer"
-            >
-              {SORT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
+
+          {/* Filter chips row */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">Filters:</span>
+
+            {/* Category dropdown */}
+            <div className="relative" ref={catRef}>
+              <button
+                onClick={() => { setShowCatDropdown(!showCatDropdown); setShowSortDropdown(false); }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs transition-colors ${
+                  category !== "all" ? "bg-primary/15 text-profit" : "bg-background text-secondary-foreground hover:bg-background/80"
+                }`}
+              >
+                <span>{currentCat?.emoji}</span>
+                <span>{currentCat?.label}</span>
+                <ChevronDown size={12} className={`transition-transform ${showCatDropdown ? "rotate-180" : ""}`} />
+              </button>
+              {showCatDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-card rounded-md py-1 z-50 min-w-[180px]" style={{ boxShadow: "0 10px 40px rgba(0,0,0,0.5), var(--surface-glow)" }}>
+                  {CATEGORY_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleCategoryChange(opt.value)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 text-xs text-left transition-colors ${
+                        category === opt.value ? "bg-primary/15 text-profit" : "text-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      <span>{opt.emoji}</span>
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sort dropdown */}
+            <div className="relative" ref={sortRef}>
+              <button
+                onClick={() => { setShowSortDropdown(!showSortDropdown); setShowCatDropdown(false); }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs bg-background text-secondary-foreground hover:bg-background/80 transition-colors"
+              >
+                <span>Sort: {currentSort?.label}</span>
+                <ChevronDown size={12} className={`transition-transform ${showSortDropdown ? "rotate-180" : ""}`} />
+              </button>
+              {showSortDropdown && (
+                <div className="absolute top-full left-0 mt-1 bg-card rounded-md py-1 z-50 min-w-[200px]" style={{ boxShadow: "0 10px 40px rgba(0,0,0,0.5), var(--surface-glow)" }}>
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => handleSortChange(opt.value)}
+                      className={`w-full px-3 py-2 text-xs text-left transition-colors ${
+                        sort === opt.value ? "bg-primary/15 text-profit" : "text-foreground hover:bg-secondary"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Active filter badges */}
+            {search && (
+              <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-[10px] text-profit">
+                "{search}"
+                <button onClick={() => { setSearch(""); setItems([]); setTimeout(() => loadItems(), 0); }}>
+                  <X size={10} />
+                </button>
+              </span>
+            )}
           </div>
         </div>
       )}
@@ -164,7 +254,11 @@ export function ItemGrid({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
         {items.map((item) => (
-          <div key={item.id} className="surface-card p-3 cursor-pointer group">
+          <div
+            key={item.id}
+            className="surface-card p-3 cursor-pointer group"
+            onClick={() => setSelectedItem(item)}
+          >
             <div className="aspect-square bg-secondary rounded-md mb-2.5 overflow-hidden flex items-center justify-center relative">
               {thumbnails[item.id] ? (
                 <img
@@ -184,14 +278,26 @@ export function ItemGrid({
             </div>
             <p className="text-xs text-foreground truncate font-medium">{item.name}</p>
             <div className="flex items-center justify-between mt-1.5">
-              <div>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">RAP</p>
-                <p className="text-data text-xs text-foreground">{formatRap(item.recentAveragePrice)}</p>
-              </div>
-              {item.price !== undefined && item.price > 0 && (
-                <div className="text-right">
+              {item.price !== undefined && item.price > 0 ? (
+                <div>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Price</p>
                   <p className="text-data text-xs text-profit">{formatRap(item.price)}</p>
+                </div>
+              ) : item.recentAveragePrice ? (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">RAP</p>
+                  <p className="text-data text-xs text-foreground">{formatRap(item.recentAveragePrice)}</p>
+                </div>
+              ) : (
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Price</p>
+                  <p className="text-data text-xs text-muted-foreground">Free</p>
+                </div>
+              )}
+              {item.lowestPrice && item.lowestPrice > 0 && (
+                <div className="text-right">
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Lowest</p>
+                  <p className="text-data text-xs text-foreground">{formatRap(item.lowestPrice)}</p>
                 </div>
               )}
             </div>
@@ -221,6 +327,13 @@ export function ItemGrid({
           </button>
         </div>
       )}
+
+      {/* Item Detail Modal */}
+      <ItemDetailModal
+        item={selectedItem}
+        thumbnailUrl={selectedItem ? thumbnails[selectedItem.id] : undefined}
+        onClose={() => setSelectedItem(null)}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Search, Package, Users, TrendingUp, BarChart3, Settings } from "lucide-react";
+import { Package, Users, TrendingUp, BarChart3, Crown } from "lucide-react";
 import { useState } from "react";
 
 interface SidebarNavProps {
@@ -9,6 +9,7 @@ interface SidebarNavProps {
 const navItems = [
   { id: "market", icon: TrendingUp, label: "Market" },
   { id: "catalog", icon: Package, label: "Catalog" },
+  { id: "limiteds", icon: Crown, label: "Limiteds" },
   { id: "players", icon: Users, label: "Players" },
   { id: "analytics", icon: BarChart3, label: "Analytics" },
 ];
@@ -51,13 +52,6 @@ export function SidebarNav({ activeTab, onTabChange }: SidebarNavProps) {
           </button>
         ))}
       </nav>
-
-      <div className="px-2 w-full">
-        <button className="flex items-center gap-3 px-3 py-2.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors text-sm w-full">
-          <Settings size={18} />
-          {expanded && <span>Settings</span>}
-        </button>
-      </div>
     </aside>
   );
 }
