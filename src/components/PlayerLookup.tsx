@@ -29,6 +29,16 @@ export function PlayerLookup() {
       const results = await searchUsers(username.trim());
       setSearchResults(results);
       setShowResults(true);
+      // Fetch avatars for all results
+      if (results.length > 0) {
+        const ids = results.map((u: RobloxUser) => u.id);
+        const data = await robloxApi.getUserAvatarThumbnails(ids);
+        const map: Record<number, string> = {};
+        (data.data || []).forEach((t: any) => {
+          if (t.imageUrl) map[t.targetId] = t.imageUrl;
+        });
+        setSearchAvatars(map);
+      }
     }
   };
 
